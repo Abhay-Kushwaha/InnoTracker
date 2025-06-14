@@ -1,0 +1,57 @@
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: #C9E6F0;
+}
+
+.hero-img {
+  transition: all 0.3s ease;
+}
+
+.hero-img:hover {
+  content: url('/src/assets/img/girl3.png');
+  /* Update path if necessary */
+}
+
+/* Specific button style that might be harder with just Tailwind */
+.hero-content .btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #006073;
+  color: white;
+  font-size: 1.1rem;
+  border-radius: 50px;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+/* Animation for the floating circles */
+@keyframes move-around {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(50px, 0);
+  }
+
+  50% {
+    transform: translate(0, 50px);
+  }
+
+  75% {
+    transform: translate(-50px, 0);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.circle {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  animation: move-around 4s linear infinite;
+  z-index: -1;
+}
