@@ -2,8 +2,13 @@ import React, { useEffect } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import logo from '../assets/img/logo.png'; // Adjust path if necessary
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   useEffect(() => {
     AOS.init({
       duration: 1000,
@@ -11,6 +16,11 @@ const Navbar = () => {
       easing: 'ease-in-out',
     });
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <nav className="bg-[#e9eeef] shadow-md py-2">
@@ -40,7 +50,7 @@ const Navbar = () => {
           </ul>
           <div className="ml-3">
             <select className="form-select border border-gray-300 rounded px-3 py-2 text-gray-700 text-sm" aria-label="Language selection">
-              <option selected>English</option>
+              <option defaultValue>English</option>
               <option value="1">हिंदी (Hindi)</option>
               <option value="2">Español (Spanish)</option>
               <option value="3">Français (French)</option>
@@ -48,7 +58,11 @@ const Navbar = () => {
             </select>
           </div>
           <div className="bg-[#006073] py-2 px-6 rounded-full mx-5 text-white cursor-pointer">
-            <a href="/login">Sign in</a>
+            {user ? (
+              <span onClick={handleLogout} style={{ cursor: 'pointer' }}>Sign out</span>
+            ) : (
+              <Link to="/login">Sign in</Link>
+            )}
           </div>
         </div>
       </div>

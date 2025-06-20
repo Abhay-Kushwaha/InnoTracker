@@ -19,7 +19,7 @@ const ProjectCard = ({ project }) => {
         </p>
         <p className="flex items-center">
           <FaMoneyBillWave className="mr-2 text-yellow-500 dark:text-yellow-400" />
-          <span className="font-semibold">Funding: </span> ${project.funding.toLocaleString()}
+          <span className="font-semibold">Funding: </span> ${typeof project.funding === 'number' ? project.funding.toLocaleString() : 'N/A'}
         </p>
         <p className="flex items-center">
           <FaInfoCircle className="mr-2 text-purple-500 dark:text-purple-400" />

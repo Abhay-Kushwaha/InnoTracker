@@ -1,45 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { FaUserCircle, FaEnvelope, FaPhone, FaCalendarAlt, FaMapMarkerAlt, FaInfoCircle, FaSave, FaMoon, FaSun } from 'react-icons/fa';
 
 const SettingsPage = () => {
-  // Sample user data (in a real app, this would be fetched from a backend)
-  const [userInfo, setUserInfo] = useState({
-    fullName: "Vineet Bhai",
-    email: "bhai@example.com",
-    phoneNumber: "+91 98765 43210",
-    dateOfBirth: "1988-04-20",
-    address: "123 Innovation Drive, Research City, 110001",
-    bio: "Passionate researcher with a focus on AI ethics and sustainable technology. Dedicated to driving innovation for societal good.",
-    profilePicture: "https://placehold.co/150x150/A78BFA/ffffff?text=RG", // Placeholder image
-    darkModeEnabled: localStorage.getItem('darkMode') === 'true' // Read initial preference from local storage
+  const { user, setUser } = useAuth();
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    dob: '',
+    address: '',
+    bio: '',
+    profilePic: ''
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  // Initialize AOS
   useEffect(() => {
-    AOS.init({
-      duration: 1000,
-      once: false,
-      easing: 'ease-in-out',
-    });
+    fetchProfile();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setUserInfo(prevInfo => ({
-      ...prevInfo,
-      [name]: value
-    }));
+  const fetchProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.get('/api/users/me', { headers });
+      setForm({
+        name: res.data.name || '',
+        email: res.data.email || '',
+        phone: res.data.phone || '',
+        dob: res.data.dob || '',
+        address: res.data.address || '',
+        bio: res.data.bio || '',
+        profilePic: res.data.profilePic || ''
+      });
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to fetch profile');
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // In a real application, you'd send userInfo to your backend here
-    console.log("Saving user info:", userInfo);
-    alert("Personal information updated successfully!");
-    // You might want to disable the form or show a loading spinner here
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.put('/api/users/me', form, { headers });
+      setSuccess('Profile updated successfully!');
+      setUser && setUser(res.data); // update context if possible
+    } catch (err) {
+      setError('Failed to update profile');
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="font-poppins p-4 md:p-8 bg-[#C9E6F0] dark:bg-zinc-800 min-h-screen text-gray-900 dark:text-gray-100">
@@ -54,19 +79,21 @@ const SettingsPage = () => {
           <FaUserCircle className="mr-3 text-3xl" /> Personal Information
         </h2>
 
+        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+        {success && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">{success}</div>}
+
         <div className="flex flex-col items-center mb-8">
           <img
-            src={userInfo.profilePicture}
+            src={form.profilePic || `https://placehold.co/150x150/A78BFA/ffffff?text=${form.name?.charAt(0) || 'U'}`}
             alt="Profile"
             className="w-32 h-32 rounded-full object-cover border-4 border-indigo-300 dark:border-indigo-600 shadow-md"
-            onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/150x150/A78BFA/ffffff?text=RG"; }} // Fallback
           />
-          <label htmlFor="profilePicture" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Profile Picture URL (Optional)</label>
+          <label htmlFor="profilePic" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Profile Picture URL (Optional)</label>
           <input
             type="url"
-            id="profilePicture"
-            name="profilePicture"
-            value={userInfo.profilePicture}
+            id="profilePic"
+            name="profilePic"
+            value={form.profilePic}
             onChange={handleChange}
             className="w-full max-w-sm px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
             placeholder="Paste image URL here"
@@ -76,12 +103,12 @@ const SettingsPage = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
               <input
                 type="text"
-                id="fullName"
-                name="fullName"
-                value={userInfo.fullName}
+                id="name"
+                name="name"
+                value={form.name}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
                 required
@@ -93,33 +120,34 @@ const SettingsPage = () => {
                 type="email"
                 id="email"
                 name="email"
-                value={userInfo.email}
+                value={form.email}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
                 required
+                disabled
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
               <input
                 type="tel"
-                id="phoneNumber"
-                name="phoneNumber"
-                value={userInfo.phoneNumber}
+                id="phone"
+                name="phone"
+                value={form.phone}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
               />
             </div>
             <div>
-              <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Birth</label>
+              <label htmlFor="dob" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Birth</label>
               <input
                 type="date"
-                id="dateOfBirth"
-                name="dateOfBirth"
-                value={userInfo.dateOfBirth}
+                id="dob"
+                name="dob"
+                value={form.dob}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
               />
@@ -132,7 +160,7 @@ const SettingsPage = () => {
               type="text"
               id="address"
               name="address"
-              value={userInfo.address}
+              value={form.address}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
             />
@@ -143,7 +171,7 @@ const SettingsPage = () => {
             <textarea
               id="bio"
               name="bio"
-              value={userInfo.bio}
+              value={form.bio}
               onChange={handleChange}
               rows="4"
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"

@@ -1,7 +1,12 @@
 import React from 'react';
 import { FaAward, FaCalendarAlt, FaBuilding, FaLink, FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 const AwardCard = ({ award, onEdit, onDelete }) => {
+    const { user } = useAuth();
+    const canModify = user && (user._id === award.createdBy || user.role === 'admin');
+
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl overflow-hidden transform transition duration-300 hover:scale-105 group relative" data-aos="zoom-in">
             <div className="h-40 w-full bg-gray-100 dark:bg-zinc-700 flex items-center justify-center overflow-hidden">
@@ -11,23 +16,36 @@ const AwardCard = ({ award, onEdit, onDelete }) => {
                 />
             </div>
             <div className="flex flex-col justify-between gap-5 h-3/4 p-6">
-                <div>
+                <div className="flex justify-between items-start mb-4">
                     <h3 className="text-2xl text-center font-bold text-[#014250] dark:text-indigo-400 mb-2 leading-tight">
-                        {award.awardName}
+                        {award.title}
                     </h3>
-                    <p className="text-gray-600 text-center dark:text-gray-300 text-sm mb-4">
-                        {award.category}
-                    </p>
+                    {canModify && (
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => onEdit(award)}
+                                className="text-blue-500 hover:text-blue-700 transition-colors"
+                            >
+                                <FaEdit size={18} />
+                            </button>
+                            <button
+                                onClick={() => onDelete(award._id)}
+                                className="text-red-500 hover:text-red-700 transition-colors"
+                            >
+                                <FaTrashAlt size={18} />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-4 text-gray-700 dark:text-gray-200 text-sm">
                     <p className="flex items-center">
                         <FaBuilding className="mr-2 text-md text-blue-500" />
-                        <span className="font-semibold">Awarded by:</span> {award.awardingBody}
+                        <span className="font-semibold">Awarding Body:</span> {award.awardingBody}
                     </p>
                     <p className="flex items-center">
                         <FaCalendarAlt className="mr-2 text-md text-yellow-500" />
-                        <span className="font-semibold">Year:</span> {award.year}
+                        <span className="font-semibold">Date Received:</span> {format(new Date(award.dateReceived), 'PP')}
                     </p>
                     <p className="mt-4 text-base text-gray-800 dark:text-gray-200">
                         {award.description}
@@ -46,24 +64,6 @@ const AwardCard = ({ award, onEdit, onDelete }) => {
                         </a>
                     </div>
                 )}
-
-                {/* Edit and Delete Buttons (appear on hover or are always visible depending on preference) */}
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-2">
-                    <button
-                        onClick={() => onEdit(award)}
-                        className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition duration-200 shadow-md"
-                        title="Edit Award"
-                    >
-                        <FaEdit />
-                    </button>
-                    <button
-                        onClick={() => onDelete(award.id)}
-                        className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition duration-200 shadow-md"
-                        title="Delete Award"
-                    >
-                        <FaTrashAlt />
-                    </button>
-                </div>
             </div>
         </div>
     );

@@ -2,8 +2,11 @@ import React, { useEffect } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import heroImage from '../assets/img/test.png'; // Adjust path if necessary
+import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const HeroSection = () => {
+    const { user } = useAuth();
     useEffect(() => {
         AOS.init({
             duration: 1000,
@@ -41,7 +44,11 @@ const HeroSection = () => {
                         charts and visualizations.
                     </h7>
                 </div>
-                <a href="/login" className="btn inline-block mt-8"><span className='px-8'>Sign in</span></a>
+                {user ? (
+                  <div className="btn inline-block mt-8 text-xl font-bold">Welcome, {user.name}</div>
+                ) : (
+                  <Link to="/login" className="btn inline-block mt-8"><span className='px-8'>Sign in</span></Link>
+                )}
             </div>
         </section>
     );

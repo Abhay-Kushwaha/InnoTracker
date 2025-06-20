@@ -5,77 +5,26 @@ import { FaFileDownload } from "react-icons/fa";
 import AddPublicationForm from "../components/AddPublicationForm";
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
+import { publicationAPI, patentAPI } from '../services/api';
 
 // Register all necessary components from Chart.js
 Chart.register(...registerables);
 
-// Sample publications data
-const initialPublicationsData = [
-  {
-    id: 1,
-    title: "Understanding Quantum Computing",
-    authors: "Alice Smith, Bob Johnson",
-    publicationDate: "2023-06-15",
-    journal: "International Journal of Quantum Research",
-    citations: 120,
-    isPatent: false,
-  },
-  {
-    id: 2,
-    title: "Machine Learning in Healthcare",
-    authors: "Charlie Brown",
-    publicationDate: "2022-01-22",
-    journal: "Healthcare AI Conference",
-    citations: 85,
-    isPatent: false,
-  },
-  {
-    id: 3,
-    title: "Innovations in Renewable Energy",
-    authors: "David White, Eve Davis",
-    publicationDate: "2023-09-05",
-    journal: "Journal of Energy Innovations",
-    citations: 90,
-    isPatent: true,
-  },
-  {
-    id: 4,
-    title: "Advances in Nanotechnology",
-    authors: "Alice Smith, Frank Green",
-    publicationDate: "2023-11-10",
-    journal: "Nano Letters",
-    citations: 150,
-    isPatent: false,
-  },
-  {
-    id: 5,
-    title: "Sustainable Agriculture Practices",
-    authors: "Grace Hall",
-    publicationDate: "2024-03-01",
-    journal: "Environmental Science Journal",
-    citations: 45,
-    isPatent: false,
-  },
-  {
-    id: 6,
-    title: "Blockchain for Supply Chain",
-    authors: "Bob Johnson",
-    publicationDate: "2022-08-18",
-    journal: "Decentralized Systems Review",
-    citations: 70,
-    isPatent: false,
-  },
-];
-
 const PublicationsPage = () => {
-  const [publications, setPublications] = useState(initialPublicationsData);
+  const { user, loading: userLoading } = useAuth();
+  const [publications, setPublications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState({
     author: "",
     year: "",
-    type: "all",
+    journal: "",
   });
 
   useEffect(() => {
+    fetchPublications();
     AOS.init({
       duration: 1000,
       once: false,
@@ -83,19 +32,36 @@ const PublicationsPage = () => {
     });
   }, []);
 
+  const fetchPublications = async () => {
+    try {
+      const res = await publicationAPI.getAll();
+      // The backend should already filter by user, but let's double-check
+      // Filter publications to only show the current user's entries
+      const userPublications = res.data.filter(pub => 
+        pub.createdBy === user?._id || pub.createdBy?._id === user?._id
+      );
+      setPublications(userPublications);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to fetch publications');
+      setLoading(false);
+    }
+  };
+
   const filteredPublications = publications.filter((pub) => {
     const matchesAuthor = filter.author
-      ? pub.authors.toLowerCase().includes(filter.author.toLowerCase())
+      ? pub.authors.some(author => 
+          author.toLowerCase().includes(filter.author.toLowerCase())
+        )
       : true;
     const matchesYear = filter.year
       ? new Date(pub.publicationDate).getFullYear() === parseInt(filter.year)
       : true;
-    const matchesType =
-      filter.type === "all" ||
-      (filter.type === "patent" && pub.isPatent) ||
-      (filter.type === "paper" && !pub.isPatent); // Correctly filter for research papers
+    const matchesJournal = filter.journal
+      ? pub.journal.toLowerCase().includes(filter.journal.toLowerCase())
+      : true;
 
-    return matchesAuthor && matchesYear && matchesType;
+    return matchesAuthor && matchesYear && matchesJournal;
   });
 
   const publicationYears = publications.map((pub) =>
@@ -109,10 +75,11 @@ const PublicationsPage = () => {
 
   // Calculate top researchers
   const researcherCounts = publications.reduce((acc, pub) => {
-    const authors = pub.authors.split(',').map(name => name.trim());
-    authors.forEach(author => {
-      acc[author] = (acc[author] || 0) + 1;
-    });
+    if (Array.isArray(pub.authors)) {
+      pub.authors.forEach(author => {
+        acc[author] = (acc[author] || 0) + 1;
+      });
+    }
     return acc;
   }, {});
 
@@ -215,99 +182,216 @@ const PublicationsPage = () => {
     ],
   };
 
-  const handleAddPublication = (newPublication) => {
-    // Simple ID generation for sample data
-    const newId = publications.length > 0 ? Math.max(...publications.map(p => p.id)) + 1 : 1;
-    setPublications(prev => [...prev, { ...newPublication, id: newId }]);
+  const handleAddPublication = async (newPublication) => {
+    try {
+      const publicationWithDept = { 
+        ...newPublication, 
+        department: user?.department || '',
+        authors: Array.isArray(newPublication.authors) 
+          ? newPublication.authors 
+          : newPublication.authors.split(',').map(author => author.trim())
+      };
+      
+      // Create the publication
+      const res = await publicationAPI.create(publicationWithDept);
+      setPublications(prev => [...prev, res.data]);
+      
+      // If patent checkbox is checked, create a corresponding patent
+      if (newPublication.isPatent) {
+        try {
+          const patentData = {
+            title: newPublication.title,
+            inventors: Array.isArray(newPublication.authors) 
+              ? newPublication.authors 
+              : newPublication.authors.split(',').map(author => author.trim()),
+            filingDate: newPublication.publicationDate,
+            status: 'Filed', // Default status for publications converted to patents
+            description: `Patent based on publication: ${newPublication.title}`,
+            department: user?.department || '',
+            patentNumber: '', // Will be filled when patent is granted
+            relatedPublication: res.data._id // Link to the original publication
+          };
+          
+          await patentAPI.create(patentData);
+          alert('Publication and corresponding patent added successfully!');
+        } catch (patentError) {
+          console.error('Failed to create patent:', patentError);
+          alert('Publication added successfully, but failed to create corresponding patent.');
+        }
+      } else {
+        alert('Publication added successfully!');
+      }
+      
+      setError(null);
+    } catch (err) {
+      setError('Failed to add publication');
+    }
   };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilter(prev => ({ ...prev, [name]: value }));
+  };
+
+  const exportToCSV = () => {
+    const csvData = filteredPublications.map(pub => ({
+      Title: pub.title,
+      Authors: Array.isArray(pub.authors) ? pub.authors.join(', ') : pub.authors,
+      Journal: pub.journal,
+      DOI: pub.doi || 'N/A',
+      PublicationDate: new Date(pub.publicationDate).toLocaleDateString(),
+      ImpactFactor: pub.impactFactor || 'N/A',
+      Department: pub.department
+    }));
+
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).map(value => `"${value}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'publications.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  if (loading || userLoading) return (
+    <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+    </div>
+  );
+
+  if (!user) return (
+    <div className="text-center text-red-600 p-8">
+      <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+      <p>Please log in to view and manage publications.</p>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="text-center text-red-600 p-8">
+      <h2 className="text-2xl font-bold mb-4">Error</h2>
+      <p>{error}</p>
+    </div>
+  );
 
   return (
     <div className="font-poppins p-4 md:p-8 bg-[#C9E6F0] dark:bg-zinc-800 min-h-screen text-gray-900 dark:text-gray-100">
-
       <h1 className="text-4xl md:text-5xl font-extrabold text-center text-[#014250] dark:text-[#E0E0E0] mb-6" data-aos="fade-down">
         Publications
       </h1>
 
       <div className='w-full h-px bg-gray-300 dark:bg-gray-700 mb-8' data-aos="fade-in" data-aos-delay="100"></div>
 
-      {/* Filter Bar */}
-      <div className="sticky top-4 z-10 bg-white dark:bg-zinc-900 shadow-xl p-4 md:p-6 mb-8 rounded-lg flex flex-wrap items-center gap-4">
+      {/* Filter Section */}
+      <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6 mb-8" data-aos="fade-up" data-aos-delay="200">
+        <h2 className="text-2xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Filter Publications</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <input
           type="text"
-          placeholder="Filter by Author"
-          className="flex-grow min-w-[180px] border border-gray-300 dark:border-gray-700 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+            name="author"
+            placeholder="Search by author..."
           value={filter.author}
-          onChange={(e) => setFilter({ ...filter, author: e.target.value })}
+            onChange={handleFilterChange}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800"
         />
         <input
-          type="number" // Changed to number for year input
-          placeholder="Filter by Year"
-          className="flex-grow min-w-[150px] border border-gray-300 dark:border-gray-700 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+            type="number"
+            name="year"
+            placeholder="Filter by year..."
           value={filter.year}
-          onChange={(e) => setFilter({ ...filter, year: e.target.value })}
-        />
-        <select
-          className="flex-grow min-w-[150px] border border-gray-300 dark:border-gray-700 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-          value={filter.type}
-          onChange={(e) => setFilter({ ...filter, type: e.target.value })}
-        >
-          <option value="all">All Types</option>
-          <option value="patent">Patents</option>
-          <option value="paper">Research Papers</option>
-        </select>
-      </div>
-
-      {/* Publications List */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 my-6">
-        {filteredPublications.length > 0 ? (
-          filteredPublications.map((pub, index) => (
-            <div key={pub.id} className="flex flex-col justify-between bg-white dark:bg-zinc-900 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300 p-6 border border-gray-200 dark:border-zinc-700" data-aos="fade-up" data-aos-delay={250 + (index * 50)}>
-              <div>
-                <h2 className="text-xl font-bold text-[#014250] dark:text-indigo-400 mb-2">{pub.title}</h2>
-                <p className="text-gray-700 dark:text-gray-300 text-sm mb-1"><span className="font-semibold">Authors:</span> {pub.authors}</p>
-                <p className="text-gray-600 dark:text-gray-400 text-xs mb-1"><span className="font-semibold">Date:</span> {pub.publicationDate}</p>
-                <p className="text-gray-600 dark:text-gray-400 text-xs mb-2"><span className="font-semibold">Journal:</span> {pub.journal}</p>
-                <p className="text-gray-600 dark:text-gray-400 text-xs mb-3"><span className="font-semibold">Citations:</span> {pub.citations}</p>
-              </div>
-              <div>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold
-                                ${pub.isPatent ? 'bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100' : 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'}
-                            `}>
-                  {pub.isPatent ? 'Patent' : 'Research Paper'}
-                </span>
-                <a href={`/download/${pub.id}`} className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 mt-4 flex items-center font-medium transition-colors duration-200">
-                  <FaFileDownload className="mr-2" /> Download
-                </a>
-              </div>
+            onChange={handleFilterChange}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800"
+          />
+          <input
+            type="text"
+            name="journal"
+            placeholder="Search by journal..."
+            value={filter.journal}
+            onChange={handleFilterChange}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800"
+          />
             </div>
-          ))
-        ) : (
-          <p className="col-span-full text-center text-xl font-medium text-gray-500 dark:text-gray-400 py-10" data-aos="fade-in" data-aos-delay="500">
-            No publications found matching your criteria.
-          </p>
-        )}
       </div>
 
-      {/* Charts */}
-      <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6" data-aos="fade-right" data-aos-delay="300">
-          <h2 className="text-2xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Publications Over the Years</h2>
-          <div className="h-72">
+          <h3 className="text-xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Publications Over Time</h3>
+          <div className="h-64">
             <Line data={lineChartData} options={currentChartOptions} />
           </div>
         </div>
+        
         <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6" data-aos="fade-left" data-aos-delay="400">
-          <h2 className="text-2xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Top Performing Researchers</h2>
-          <div className="h-72">
+          <h3 className="text-xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Top Researchers</h3>
+          <div className="h-64">
             <Bar data={barChartData} options={currentChartOptions} />
           </div>
         </div>
       </div>
 
       {/* Add Publication Form */}
-      <div className="mt-10 p-6 bg-white text-black dark:bg-zinc-900 rounded-lg shadow-xl" data-aos="fade-up" data-aos-delay="300">
-        <h2 className="text-2xl font-bold text-[#014250] dark:text-indigo-400 mb-6">Add New Publication</h2>
-        <AddPublicationForm onAddPublication={handleAddPublication} />
+      <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6 mb-8" data-aos="fade-up" data-aos-delay="500">
+        <h2 className="text-2xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Add New Publication</h2>
+        <AddPublicationForm onAddPublication={handleAddPublication} user={user} />
+      </div>
+
+      {/* Publications List */}
+      <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6" data-aos="fade-up" data-aos-delay="600">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-[#014250] dark:text-indigo-400">
+            Publications ({filteredPublications.length})
+          </h2>
+          <button
+            onClick={exportToCSV}
+            className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition duration-300"
+          >
+            <FaFileDownload className="mr-2" />
+            Export CSV
+          </button>
+        </div>
+
+        {filteredPublications.length === 0 ? (
+          <p className="text-center text-gray-600 dark:text-gray-400 py-8">
+            No publications found matching your criteria.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {filteredPublications.map((publication) => (
+              <div
+                key={publication._id}
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition duration-300"
+              >
+                <h3 className="text-lg font-semibold text-[#014250] dark:text-indigo-400 mb-2">
+                  {publication.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-2">
+                  <strong>Authors:</strong> {Array.isArray(publication.authors) ? publication.authors.join(', ') : publication.authors}
+                </p>
+                <p className="text-gray-600 dark:text-gray-300 mb-2">
+                  <strong>Journal:</strong> {publication.journal}
+                </p>
+                <p className="text-gray-600 dark:text-gray-300 mb-2">
+                  <strong>Publication Date:</strong> {new Date(publication.publicationDate).toLocaleDateString()}
+                </p>
+                {publication.doi && (
+                  <p className="text-gray-600 dark:text-gray-300 mb-2">
+                    <strong>DOI:</strong> {publication.doi}
+                  </p>
+                )}
+                {publication.impactFactor && (
+                  <p className="text-gray-600 dark:text-gray-300">
+                    <strong>Impact Factor:</strong> {publication.impactFactor}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

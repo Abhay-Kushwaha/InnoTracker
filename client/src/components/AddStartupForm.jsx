@@ -1,295 +1,241 @@
 // src/components/AddStartupForm.jsx
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 const AddStartupForm = ({ onAddStartup, initialData = null, onCancel = null }) => {
-    const [companyName, setCompanyName] = useState('');
-    const [founderName, setFounderName] = useState('');
-    const [inceptionDate, setInceptionDate] = useState('');
-    const [industry, setIndustry] = useState('');
-    const [description, setDescription] = useState('');
-    const [incubationCenter, setIncubationCenter] = useState('');
-    const [incubationStartDate, setIncubationStartDate] = useState('');
-    const [fundingRaised, setFundingRaised] = useState('');
-    const [stage, setStage] = useState('Ideation'); // Default stage
-    const [website, setWebsite] = useState('');
-    const [contactEmail, setContactEmail] = useState('');
-    const [teamSize, setTeamSize] = useState('');
-    const [achievements, setAchievements] = useState(['']); // Start with one empty achievement field
+    const { user } = useAuth();
+    const [formData, setFormData] = useState({
+        name: '',
+        founders: [''],
+        description: '',
+        industry: '',
+        stage: 'Idea',
+        funding: 0,
+        launchDate: '',
+        department: user?.department || '',
+        status: 'Active'
+    });
 
     useEffect(() => {
         if (initialData) {
-            setCompanyName(initialData.companyName || '');
-            setFounderName(initialData.founderName || '');
-            setInceptionDate(initialData.inceptionDate || '');
-            setIndustry(initialData.industry || '');
-            setDescription(initialData.description || '');
-            setIncubationCenter(initialData.incubationCenter || '');
-            setIncubationStartDate(initialData.incubationStartDate || '');
-            setFundingRaised(initialData.fundingRaised || '');
-            setStage(initialData.stage || 'Ideation');
-            setWebsite(initialData.website || '');
-            setContactEmail(initialData.contactEmail || '');
-            setTeamSize(initialData.teamSize || '');
-            setAchievements(initialData.achievements && initialData.achievements.length > 0 ? initialData.achievements : ['']);
+            setFormData({
+                name: initialData.name || '',
+                founders: initialData.founders || [''],
+                description: initialData.description || '',
+                industry: initialData.industry || '',
+                stage: initialData.stage || 'Idea',
+                funding: initialData.funding || 0,
+                launchDate: initialData.launchDate ? new Date(initialData.launchDate).toISOString().split('T')[0] : '',
+                department: initialData.department || user?.department || '',
+                status: initialData.status || 'Active'
+            });
         }
-    }, [initialData]);
+    }, [initialData, user]);
 
-    const handleAchievementChange = (index, value) => {
-        const newAchievements = [...achievements];
-        newAchievements[index] = value;
-        setAchievements(newAchievements);
+    const handleFounderChange = (index, value) => {
+        const newFounders = [...formData.founders];
+        newFounders[index] = value;
+        setFormData({ ...formData, founders: newFounders });
     };
 
-    const addAchievementField = () => {
-        setAchievements([...achievements, '']);
+    const addFounderField = () => {
+        setFormData({ ...formData, founders: [...formData.founders, ''] });
     };
 
-    const removeAchievementField = (index) => {
-        const newAchievements = achievements.filter((_, i) => i !== index);
-        setAchievements(newAchievements);
+    const removeFounderField = (index) => {
+        if (formData.founders.length > 1) {
+            const newFounders = formData.founders.filter((_, i) => i !== index);
+            setFormData({ ...formData, founders: newFounders });
+        }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Simple validation
-        if (!companyName || !founderName || !inceptionDate || !industry || !description || !stage) {
-            alert('Please fill in all required fields: Company Name, Founder Name, Inception Date, Industry, Description, and Stage.');
+        
+        // Validate required fields
+        if (!formData.name || !formData.founders[0] || !formData.description || 
+            !formData.industry || !formData.department) {
+            alert('Please fill in all required fields');
             return;
         }
 
-        const newStartup = {
-            id: initialData ? initialData.id : Date.now(), // Keep existing ID if editing
-            companyName,
-            founderName,
-            inceptionDate,
-            industry,
-            description,
-            incubationCenter: incubationCenter || null,
-            incubationStartDate: incubationStartDate || null,
-            fundingRaised: fundingRaised ? parseInt(fundingRaised) : 0,
-            stage,
-            website: website || null,
-            contactEmail: contactEmail || null,
-            teamSize: teamSize ? parseInt(teamSize) : 0,
-            achievements: achievements.filter(a => a.trim() !== '')
+        // Filter out empty founder fields
+        const cleanedData = {
+            ...formData,
+            founders: formData.founders.filter(f => f.trim() !== ''),
+            funding: Number(formData.funding)
         };
 
-        onAddStartup(newStartup); // This function will handle both add and update
+        try {
+            await onAddStartup(cleanedData);
+            if (onCancel) onCancel();
+        } catch (error) {
+            alert(error.message || 'Failed to add startup');
+        }
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Name <span className="text-red-500">*</span>
+                    </label>
                     <input
                         type="text"
-                        id="companyName"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800"
                         required
                     />
                 </div>
                 <div>
-                    <label htmlFor="founderName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Founder Name <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Department <span className="text-red-500">*</span>
+                    </label>
                     <input
                         type="text"
-                        id="founderName"
-                        value={founderName}
-                        onChange={(e) => setFounderName(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                        required
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label htmlFor="inceptionDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inception Date <span className="text-red-500">*</span></label>
-                    <input
-                        type="date"
-                        id="inceptionDate"
-                        value={inceptionDate}
-                        onChange={(e) => setInceptionDate(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                        required
-                    />
-                </div>
-                <div>
-                    <label htmlFor="industry" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Industry <span className="text-red-500">*</span></label>
-                    <input
-                        type="text"
-                        id="industry"
-                        value={industry}
-                        onChange={(e) => setIndustry(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                        placeholder="e.g., AI, Fintech, EdTech"
+                        value={formData.department}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800"
                         required
                     />
                 </div>
             </div>
 
             <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Founders <span className="text-red-500">*</span>
+                </label>
+                {formData.founders.map((founder, index) => (
+                    <div key={index} className="flex gap-2 mb-2">
+                        <input
+                            type="text"
+                            value={founder}
+                            onChange={(e) => handleFounderChange(index, e.target.value)}
+                            className="flex-1 px-4 py-2 border rounded-lg dark:bg-gray-800"
+                            required={index === 0}
+                        />
+                        {index > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => removeFounderField(index)}
+                                className="px-3 py-2 bg-red-500 text-white rounded-lg"
+                            >
+                                Remove
+                            </button>
+                        )}
+                    </div>
+                ))}
+                <button
+                    type="button"
+                    onClick={addFounderField}
+                    className="mt-2 px-4 py-2 bg-green-500 text-white rounded-lg"
+                >
+                    Add Founder
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Industry <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        value={formData.industry}
+                        onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800"
+                        required
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Stage <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        value={formData.stage}
+                        onChange={(e) => setFormData({ ...formData, stage: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800"
+                        required
+                    >
+                        <option value="Idea">Idea</option>
+                        <option value="MVP">MVP</option>
+                        <option value="Early Stage">Early Stage</option>
+                        <option value="Growth">Growth</option>
+                        <option value="Established">Established</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Description <span className="text-red-500">*</span>
+                </label>
                 <textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows="4"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                    placeholder="Briefly describe your startup and its mission..."
+                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800"
                     required
                 ></textarea>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label htmlFor="incubationCenter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incubation Center (Optional)</label>
-                    <input
-                        type="text"
-                        id="incubationCenter"
-                        value={incubationCenter}
-                        onChange={(e) => setIncubationCenter(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                        placeholder="e.g., TechHub Innovation Center"
-                    />
-                </div>
-                <div>
-                    <label htmlFor="incubationStartDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incubation Start Date (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Launch Date
+                    </label>
                     <input
                         type="date"
-                        id="incubationStartDate"
-                        value={incubationStartDate}
-                        onChange={(e) => setIncubationStartDate(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
+                        value={formData.launchDate}
+                        onChange={(e) => setFormData({ ...formData, launchDate: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800"
                     />
                 </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label htmlFor="fundingRaised" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Funding Raised (USD) (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Funding (USD)
+                    </label>
                     <input
                         type="number"
-                        id="fundingRaised"
-                        value={fundingRaised}
-                        onChange={(e) => setFundingRaised(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
+                        value={formData.funding}
+                        onChange={(e) => setFormData({ ...formData, funding: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800"
                         min="0"
                     />
                 </div>
-                <div>
-                    <label htmlFor="stage" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stage <span className="text-red-500">*</span></label>
-                    <select
-                        id="stage"
-                        value={stage}
-                        onChange={(e) => setStage(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                        required
-                    >
-                        <option value="Ideation">Ideation</option>
-                        <option value="Proof of Concept">Proof of Concept</option>
-                        <option value="Seed Round">Seed Round</option>
-                        <option value="Series A">Series A</option>
-                        <option value="Growth">Growth</option>
-                        <option value="Mature">Mature</option>
-                    </select>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label htmlFor="website" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website (Optional)</label>
-                    <input
-                        type="url"
-                        id="website"
-                        value={website}
-                        onChange={(e) => setWebsite(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                        placeholder="https://www.yourstartup.com"
-                    />
-                </div>
-                <div>
-                    <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Email (Optional)</label>
-                    <input
-                        type="email"
-                        id="contactEmail"
-                        value={contactEmail}
-                        onChange={(e) => setContactEmail(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                        placeholder="contact@yourstartup.com"
-                    />
-                </div>
             </div>
 
             <div>
-                <label htmlFor="teamSize" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Team Size (Optional)</label>
-                <input
-                    type="number"
-                    id="teamSize"
-                    value={teamSize}
-                    onChange={(e) => setTeamSize(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                    min="1"
-                />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Status
+                </label>
+                <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800"
+                >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Acquired">Acquired</option>
+                    <option value="Closed">Closed</option>
+                </select>
             </div>
 
-            <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Key Achievements (Optional)</label>
-                {achievements.map((achievement, index) => (
-                    <div key={index} className="flex items-center space-x-2 mb-3">
-                        <input
-                            type="text"
-                            value={achievement}
-                            onChange={(e) => handleAchievementChange(index, e.target.value)}
-                            className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
-                            placeholder={`Achievement ${index + 1}`}
-                        />
-                        {achievements.length > 1 && (
-                            <button
-                                type="button"
-                                onClick={() => removeAchievementField(index)}
-                                className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-200"
-                            >
-                                -
-                            </button>
-                        )}
-                        {index === achievements.length - 1 && (
-                            <button
-                                type="button"
-                                onClick={addAchievementField}
-                                className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-200"
-                            >
-                                +
-                            </button>
-                        )}
-                    </div>
-                ))}
-                {achievements.length === 0 && ( // Allow adding if all are removed
-                    <button
-                        type="button"
-                        onClick={addAchievementField}
-                        className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-200"
-                    >
-                        Add Achievement
-                    </button>
-                )}
-            </div>
-
-            <div className="flex justify-end space-x-4 mt-6">
-                {onCancel && ( // Show cancel button only in edit mode
+            <div className="flex justify-end space-x-4">
+                {onCancel && (
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100 font-semibold rounded-lg shadow-md transition duration-300 ease-in-out"
+                        className="px-6 py-2 bg-gray-500 text-white rounded-lg"
                     >
                         Cancel
                     </button>
                 )}
                 <button
                     type="submit"
-                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition duration-300 ease-in-out"
+                    className="px-6 py-2 bg-blue-500 text-white rounded-lg"
                 >
                     {initialData ? 'Update Startup' : 'Add Startup'}
                 </button>

@@ -1,258 +1,204 @@
-import React, { useEffect } from 'react'; // Import useEffect
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+} from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-import { Chart, registerables } from 'chart.js';
 import { FaClipboardCheck, FaCalendarAlt } from 'react-icons/fa'; // Importing icons
 import AOS from 'aos'; // Import AOS
 import 'aos/dist/aos.css'; // Import AOS CSS
+import { 
+    publicationAPI, 
+    grantAPI, 
+    awardAPI, 
+    patentAPI, 
+    startupAPI, 
+    innovationProjectAPI 
+} from '../services/api';
 
-// Register all necessary components from Chart.js
-Chart.register(...registerables);
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
+);
 
-export default function Home() {
-  // Sample data for metrics (replace with actual data as needed)
-  const metricsData = {
-    publications: [5, 10, 7, 15], // Sample data for last 4 years
-    patents: [2, 3, 5, 4], // Sample data for last 4 years
-    impactScores: [89.5, 90, 88, 92], // Sample data for last 4 years
-    grantsReceived: 200000, // Total grants received
-    totalGrants: 300000, // Total potential grants
-  };
-
-  // Initialize AOS within Home component if it has its own animations
-  // However, it's better to initialize once in DashboardLayout if it wraps everything.
-  // Keeping it here for component-specific animations.
-  useEffect(() => {
-    AOS.init({
-      duration: 1000,
-      once: false, // Set to true if you only want animations to happen once per element
-      easing: 'ease-in-out',
+const Home = () => {
+    const { user } = useAuth();
+    const [metrics, setMetrics] = useState({
+        publications: 0,
+        patents: 0,
+        grants: 0,
+        awards: 0,
+        startups: 0,
+        projects: 0
     });
-  }, []);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-  // Chart data for publications over the years
-  const publicationsChartData = {
-    labels: ['2021', '2022', '2023', '2024'], // Years
-    datasets: [
-      {
-        label: 'Publications',
-        data: metricsData.publications,
-        backgroundColor: 'rgba(59, 130, 246, 0.7)', // Brighter blue
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
-      },
-    ],
-  };
+    useEffect(() => {
+        fetchMetrics();
+    }, []);
 
-  // Chart data for patents over the years
-  const patentsChartData = {
-    labels: ['2021', '2022', '2023', '2024'], // Years
-    datasets: [
-      {
-        label: 'Patents',
-        data: metricsData.patents,
-        backgroundColor: 'rgba(234, 179, 8, 0.7)', // Tailwind yellow-500
-        borderColor: 'rgba(234, 179, 8, 1)',
-        borderWidth: 1,
-      },
-    ],
-  };
+    const fetchMetrics = async () => {
+        try {
+            const [
+                publicationsRes,
+                patentsRes,
+                grantsRes,
+                awardsRes,
+                startupsRes,
+                projectsRes
+            ] = await Promise.all([
+                publicationAPI.getAll(),
+                patentAPI.getAll(),
+                grantAPI.getAll(),
+                awardAPI.getAll(),
+                startupAPI.getAll(),
+                innovationProjectAPI.getAll()
+            ]);
 
-  // Chart data for impact scores over the years
-  const impactScoresChartData = {
-    labels: ['2021', '2022', '2023', '2024'], // Years
-    datasets: [
-      {
-        label: 'Impact Score',
-        data: metricsData.impactScores,
-        backgroundColor: 'rgba(168, 85, 247, 0.7)', // Tailwind purple-500
-        borderColor: 'rgba(168, 85, 247, 1)',
-        borderWidth: 1,
-      },
-    ],
-  };
+            // The backend should already filter by user, but let's double-check
+            // Filter results to only show current user's data
+            const userPublications = publicationsRes.data.filter(pub => 
+                pub.createdBy === user?._id || pub.createdBy?._id === user?._id
+            );
 
-  // Chart options for consistency
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false, // Allow charts to shrink/grow freely
-    scales: {
-      x: {
-        ticks: {
-          color: 'rgba(55, 65, 81, 1)', // gray-700
-        },
-        grid: {
-          color: 'rgba(209, 213, 219, 0.3)', // gray-300 light
-        },
-      },
-      y: {
-        ticks: {
-          color: 'rgba(55, 65, 81, 1)', // gray-700
-        },
-        grid: {
-          color: 'rgba(209, 213, 219, 0.3)', // gray-300 light
-        },
-      },
-    },
-    plugins: {
-      legend: {
-        labels: {
-          color: 'rgba(55, 65, 81, 1)', // gray-700
-        },
-      },
-    },
-  };
+            const userPatents = patentsRes.data.filter(patent => 
+                patent.createdBy === user?._id || patent.createdBy?._id === user?._id
+            );
 
-  // Dark mode versions of chart options
-  const darkChartOptions = {
-    ...chartOptions,
-    scales: {
-      x: {
-        ticks: {
-          color: 'rgba(209, 213, 219, 1)', // gray-300
-        },
-        grid: {
-          color: 'rgba(107, 114, 128, 0.3)', // gray-500 light
-        },
-      },
-      y: {
-        ticks: {
-          color: 'rgba(209, 213, 219, 1)', // gray-300
-        },
-        grid: {
-          color: 'rgba(107, 114, 128, 0.3)', // gray-500 light
-        },
-      },
-    },
-    plugins: {
-      legend: {
-        labels: {
-          color: 'rgba(209, 213, 219, 1)', // gray-300
-        },
-      },
-    },
-  };
+            const userGrants = grantsRes.data.filter(grant => 
+                grant.createdBy === user?._id || grant.createdBy?._id === user?._id
+            );
 
-  // Determine which chart options to use based on dark mode (you'll need to pass this state down or use context)
-  // For now, let's assume global dark mode class on html applies
-  const currentChartOptions = document.documentElement.classList.contains('dark')
-    ? darkChartOptions
-    : chartOptions;
+            const userAwards = awardsRes.data.filter(award => 
+                award.createdBy === user?._id || award.createdBy?._id === user?._id
+            );
 
-  // Calculate grant progress percentage
-  const grantProgress = (metricsData.grantsReceived / metricsData.totalGrants) * 100;
+            const userStartups = startupsRes.data.filter(startup => 
+                startup.createdBy === user?._id || startup.createdBy?._id === user?._id
+            );
 
-  // Recent activities data (example data)
-  const recentActivities = [
-    { id: 1, activity: "Published paper on AI Ethics", date: "2024-09-15" },
-    { id: 2, activity: "Filed patent for a new algorithm", date: "2024-09-10" },
-    { id: 3, activity: "Received funding from XYZ grant", date: "2024-08-30" },
-  ];
+            const userProjects = projectsRes.data.filter(project => 
+                project.createdBy === user?._id || project.createdBy?._id === user?._id
+            );
 
-  // Upcoming events data (example data)
-  const upcomingEvents = [
-    { id: 1, event: "AI Research Conference 2024", date: "2024-10-05" },
-    { id: 2, event: "Grant Submission Deadline", date: "2024-11-01" },
-    { id: 3, event: "Webinar on Research Impact", date: "2024-11-15" },
-  ];
+            setMetrics({
+                publications: userPublications.length,
+                patents: userPatents.length,
+                grants: userGrants.length,
+                awards: userAwards.length,
+                startups: userStartups.length,
+                projects: userProjects.length
+            });
+            setLoading(false);
+        } catch (err) {
+            console.error('Error fetching metrics:', err);
+            setError(err.response?.data?.message || 'Failed to fetch metrics. Please try again.');
+            setLoading(false);
+        }
+    };
 
-  return (
-    <div className="font-poppins">
-      <section className="py-8">
-        <div className="max-w-screen-xl px-4 mx-auto grid grid-cols-1 lg:grid-cols-12 lg:gap-8">
-          {/* Main content column */}
-          <div className="lg:col-span-7 mb-8 lg:mb-0">
-            <h1 className="text-4xl text-[#014250] dark:text-[#E0E0E0] font-bold mb-4" data-aos="fade-right">
-              Welcome,
-              <br />
-              Vineet Bhai
-            </h1>
-            <p className="mb-6 text-lg text-gray-700 dark:text-gray-300" data-aos="fade-right" data-aos-delay="100">
-              It’s great to have you back! Here’s a quick look at your recent activities and achievements:
-            </p>
+    const chartData = {
+        labels: ['Publications', 'Patents', 'Grants', 'Awards', 'Startups', 'Projects'],
+        datasets: [
+            {
+                label: 'Your Innovation Metrics',
+                data: [
+                    metrics.publications,
+                    metrics.patents,
+                    metrics.grants,
+                    metrics.awards,
+                    metrics.startups,
+                    metrics.projects
+                ],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.5)',
+                    'rgba(255, 99, 132, 0.5)',
+                    'rgba(75, 192, 192, 0.5)',
+                    'rgba(255, 206, 86, 0.5)',
+                    'rgba(153, 102, 255, 0.5)',
+                    'rgba(255, 159, 64, 0.5)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }
+        ]
+    };
 
-            {/* Quick Stats Card */}
-            <div className="bg-white dark:bg-zinc-900 shadow-xl rounded-lg p-6 mb-8" data-aos="fade-up" data-aos-delay="200">
-              <h2 className="text-xl font-semibold text-[#014250] dark:text-indigo-400 mb-4">Your Recent Metrics</h2>
-              <ul className="list-none space-y-3 text-gray-800 dark:text-gray-200 mb-6">
-                <li><strong>Publications this year:</strong> <span className="font-semibold text-indigo-600 dark:text-indigo-400">{metricsData.publications[3]}</span></li>
-                <li><strong>Patents Filed:</strong> <span className="font-semibold text-yellow-600 dark:text-yellow-400">{metricsData.patents[3]}</span></li>
-                <li><strong>Grants Received:</strong> <span className="font-semibold text-green-600 dark:text-green-400">${metricsData.grantsReceived.toLocaleString()}</span> out of <span className="font-semibold text-green-700 dark:text-green-500">${metricsData.totalGrants.toLocaleString()}</span></li>
-                <li><strong>Research Impact Score:</strong> <span className="font-semibold text-purple-600 dark:text-purple-400">{metricsData.impactScores[3]}</span></li>
-              </ul>
-              <div>
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Grant Utilization:</h3>
-                <div className="bg-gray-300 dark:bg-gray-700 rounded-full h-3 mb-1">
-                  <div
-                    className="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full"
-                    style={{ width: `${grantProgress}%` }}
-                  ></div>
+    const chartOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: 'Your Innovation Excellence Metrics'
+            }
+        }
+    };
+
+    if (loading) return <div>Loading...</div>;
+    if (error) return <div>{error}</div>;
+
+    return (
+        <div className="container mx-auto p-4">
+            <h1 className="text-2xl font-bold mb-2">Welcome, {user?.name}</h1>
+            <div className="mb-6 bg-white p-4 rounded shadow">
+                <p><strong>Email:</strong> {user?.email}</p>
+                <p><strong>Department:</strong> {user?.department}</p>
+            </div>
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold mb-2">Publications</h3>
+                    <p className="text-3xl font-bold text-blue-600">{metrics.publications}</p>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{grantProgress.toFixed(2)}% utilized</p>
-              </div>
-            </div>
-
-            {/* Recent Activities Section */}
-            <div className="bg-white dark:bg-zinc-900 shadow-xl rounded-lg p-6 mb-8" data-aos="fade-up" data-aos-delay="300">
-              <h2 className="flex items-center text-xl font-semibold text-[#014250] dark:text-indigo-400 mb-4">
-                <FaClipboardCheck className="mr-3 text-indigo-600 dark:text-indigo-400 text-2xl" /> Recent Activities
-              </h2>
-              <ul className="space-y-4">
-                {recentActivities.map(activity => (
-                  <li key={activity.id} className="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-b-0 flex justify-between items-center">
-                    <p className="text-gray-800 dark:text-gray-200 font-medium">{activity.activity}</p>
-                    <span className="text-gray-500 dark:text-gray-400 text-sm flex-shrink-0">{activity.date}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Upcoming Events Section */}
-            <div className="bg-white dark:bg-zinc-900 shadow-xl rounded-lg p-6" data-aos="fade-up" data-aos-delay="400">
-              <h2 className="flex items-center text-xl font-semibold text-[#014250] dark:text-indigo-400 mb-4">
-                <FaCalendarAlt className="mr-3 text-indigo-600 dark:text-indigo-400 text-2xl" /> Upcoming Events
-              </h2>
-              <ul className="space-y-4">
-                {upcomingEvents.map(event => (
-                  <li key={event.id} className="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-b-0 flex justify-between items-center">
-                    <p className="text-gray-800 dark:text-gray-200 font-medium">{event.event}</p>
-                    <span className="text-gray-500 dark:text-gray-400 text-sm flex-shrink-0">{event.date}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Charts Column */}
-          <div className="lg:col-span-5 lg:flex lg:flex-col justify-start items-center">
-            <div className="bg-gradient-to-r from-[#006073] to-[#014250] p-6 rounded-lg shadow-xl text-center text-white w-full mb-6" data-aos="zoom-in" data-aos-delay="500">
-              <h1 className="text-3xl font-bold">Your Innovation Insights</h1>
-              <p className="mt-2 text-gray-200">Visualize your progress over the years</p>
-            </div>
-
-            {/* Metrics Charts */}
-            <div className="space-y-6 w-full">
-              <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-4" data-aos="fade-left" data-aos-delay="600">
-                <h3 className="text-xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Publications</h3>
-                <div className="h-64"> {/* Fixed height for charts */}
-                  <Bar data={publicationsChartData} options={currentChartOptions} />
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold mb-2">Patents</h3>
+                    <p className="text-3xl font-bold text-red-600">{metrics.patents}</p>
                 </div>
-              </div>
-              <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-4" data-aos="fade-left" data-aos-delay="700">
-                <h3 className="text-xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Patents</h3>
-                <div className="h-64">
-                  <Bar data={patentsChartData} options={currentChartOptions} />
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold mb-2">Grants</h3>
+                    <p className="text-3xl font-bold text-green-600">{metrics.grants}</p>
                 </div>
-              </div>
-              <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-4" data-aos="fade-left" data-aos-delay="800">
-                <h3 className="text-xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Impact Score</h3>
-                <div className="h-64">
-                  <Bar data={impactScoresChartData} options={currentChartOptions} />
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold mb-2">Awards</h3>
+                    <p className="text-3xl font-bold text-yellow-600">{metrics.awards}</p>
                 </div>
-              </div>
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold mb-2">Startups</h3>
+                    <p className="text-3xl font-bold text-purple-600">{metrics.startups}</p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold mb-2">Projects</h3>
+                    <p className="text-3xl font-bold text-orange-600">{metrics.projects}</p>
+                </div>
             </div>
-          </div>
+            {/* Chart */}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+                <Bar data={chartData} options={chartOptions} />
+            </div>
         </div>
-      </section>
-    </div>
-  );
-}
+    );
+};
+
+export default Home;
