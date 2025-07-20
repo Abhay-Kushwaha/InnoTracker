@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -14,14 +14,14 @@ import { Bar } from 'react-chartjs-2';
 import { FaClipboardCheck, FaCalendarAlt } from 'react-icons/fa'; // Importing icons
 import AOS from 'aos'; // Import AOS
 import 'aos/dist/aos.css'; // Import AOS CSS
-import { 
-    publicationAPI, 
-    grantAPI, 
-    awardAPI, 
-    patentAPI, 
-    startupAPI, 
-    innovationProjectAPI 
-} from '../services/api';
+import {
+    publicationAPI,
+    grantAPI,
+    awardAPI,
+    patentAPI,
+    startupAPI,
+    innovationProjectAPI
+} from '../../services/api';
 
 ChartJS.register(
     CategoryScale,
@@ -69,27 +69,27 @@ const Home = () => {
 
             // The backend should already filter by user, but let's double-check
             // Filter results to only show current user's data
-            const userPublications = publicationsRes.data.filter(pub => 
+            const userPublications = publicationsRes.data.filter(pub =>
                 pub.createdBy === user?._id || pub.createdBy?._id === user?._id
             );
 
-            const userPatents = patentsRes.data.filter(patent => 
+            const userPatents = patentsRes.data.filter(patent =>
                 patent.createdBy === user?._id || patent.createdBy?._id === user?._id
             );
 
-            const userGrants = grantsRes.data.filter(grant => 
+            const userGrants = grantsRes.data.filter(grant =>
                 grant.createdBy === user?._id || grant.createdBy?._id === user?._id
             );
 
-            const userAwards = awardsRes.data.filter(award => 
+            const userAwards = awardsRes.data.filter(award =>
                 award.createdBy === user?._id || award.createdBy?._id === user?._id
             );
 
-            const userStartups = startupsRes.data.filter(startup => 
+            const userStartups = startupsRes.data.filter(startup =>
                 startup.createdBy === user?._id || startup.createdBy?._id === user?._id
             );
 
-            const userProjects = projectsRes.data.filter(project => 
+            const userProjects = projectsRes.data.filter(project =>
                 project.createdBy === user?._id || project.createdBy?._id === user?._id
             );
 

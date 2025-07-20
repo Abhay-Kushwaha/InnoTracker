@@ -4,15 +4,15 @@ import { Chart, registerables } from 'chart.js';
 import { FaDownload, FaChartBar, FaFileAlt, FaLightbulb, FaTrophy, FaBuilding, FaUsers } from 'react-icons/fa';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import { useAuth } from '../contexts/AuthContext';
-import { 
-  publicationAPI, 
-  patentAPI, 
-  grantAPI, 
-  awardAPI, 
-  startupAPI, 
-  innovationProjectAPI 
-} from '../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import {
+  publicationAPI,
+  patentAPI,
+  grantAPI,
+  awardAPI,
+  startupAPI,
+  innovationProjectAPI
+} from '../../services/api';
 
 // Register all necessary components from Chart.js
 Chart.register(...registerables);
@@ -68,22 +68,22 @@ const InnovationMetrics = () => {
       ]);
 
       // Filter data by current user
-      const userPublications = publicationsRes.data.filter(pub => 
+      const userPublications = publicationsRes.data.filter(pub =>
         pub.createdBy === user?._id || pub.createdBy?._id === user?._id
       );
-      const userPatents = patentsRes.data.filter(patent => 
+      const userPatents = patentsRes.data.filter(patent =>
         patent.createdBy === user?._id || patent.createdBy?._id === user?._id
       );
-      const userGrants = grantsRes.data.filter(grant => 
+      const userGrants = grantsRes.data.filter(grant =>
         grant.createdBy === user?._id || grant.createdBy?._id === user?._id
       );
-      const userAwards = awardsRes.data.filter(award => 
+      const userAwards = awardsRes.data.filter(award =>
         award.createdBy === user?._id || award.createdBy?._id === user?._id
       );
-      const userStartups = startupsRes.data.filter(startup => 
+      const userStartups = startupsRes.data.filter(startup =>
         startup.createdBy === user?._id || startup.createdBy?._id === user?._id
       );
-      const userProjects = projectsRes.data.filter(project => 
+      const userProjects = projectsRes.data.filter(project =>
         project.createdBy === user?._id || project.createdBy?._id === user?._id
       );
 
@@ -105,7 +105,7 @@ const InnovationMetrics = () => {
 
   const applyFilters = () => {
     let filtered = [];
-    
+
     // Combine all data for department-based analysis
     const allData = [
       ...metrics.publications.map(item => ({ ...item, type: 'Publication' })),
@@ -127,7 +127,7 @@ const InnovationMetrics = () => {
     if (timeRange !== 'all') {
       const now = new Date();
       let cutoffDate;
-      
+
       switch (timeRange) {
         case '6months':
           cutoffDate = new Date(now.getTime() - (6 * 30 * 24 * 60 * 60 * 1000));
@@ -141,7 +141,7 @@ const InnovationMetrics = () => {
         default:
           cutoffDate = new Date(0);
       }
-      
+
       filtered = filtered.filter(item => {
         const itemDate = new Date(item.createdAt || item.publicationDate || item.filingDate || item.dateReceived || item.launchDate);
         return itemDate >= cutoffDate;
@@ -154,7 +154,7 @@ const InnovationMetrics = () => {
   // Calculate department-wise metrics
   const getDepartmentMetrics = () => {
     const departments = [...new Set(filteredData.map(item => item.department))];
-    
+
     return departments.map(dept => {
       const deptData = filteredData.filter(item => item.department === dept);
       const publications = deptData.filter(item => item.type === 'Publication').length;
@@ -163,17 +163,17 @@ const InnovationMetrics = () => {
       const awards = deptData.filter(item => item.type === 'Award').length;
       const startups = deptData.filter(item => item.type === 'Startup').length;
       const projects = deptData.filter(item => item.type === 'Project').length;
-      
+
       // Calculate total funding from grants
       const totalFunding = deptData
         .filter(item => item.type === 'Grant' && item.status === 'Approved')
         .reduce((sum, grant) => sum + (grant.amount || 0), 0);
-      
+
       // Calculate impact score (simplified calculation)
       const impactScore = Math.round(
         (publications * 10) + (patents * 15) + (grants * 5) + (awards * 20) + (startups * 25) + (projects * 8)
       );
-      
+
       return {
         department: dept,
         publications,

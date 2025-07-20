@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import PatentForm from '../components/PatentForm';
-import { patentAPI } from '../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import PatentForm from '../../components/PatentForm';
+import { patentAPI } from '../../services/api';
 import { FaEdit, FaTrash, FaDownload } from 'react-icons/fa';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -31,7 +31,7 @@ const Patent = () => {
             const response = await patentAPI.getAll();
             // The backend should already filter by user, but let's double-check
             // Filter patents to only show the current user's entries
-            const userPatents = response.data.filter(patent => 
+            const userPatents = response.data.filter(patent =>
                 patent.createdBy === user?._id || patent.createdBy?._id === user?._id
             );
             setPatents(userPatents);
@@ -55,7 +55,7 @@ const Patent = () => {
     const handleUpdatePatent = async (id, patentData) => {
         try {
             const response = await patentAPI.update(id, patentData);
-            setPatents(patents.map(patent => 
+            setPatents(patents.map(patent =>
                 patent._id === id ? response.data : patent
             ));
             setEditingPatent(null);
@@ -198,9 +198,9 @@ const Patent = () => {
                 <h2 className="text-2xl font-bold text-[#014250] dark:text-indigo-400 mb-4">
                     {editingPatent ? 'Edit Patent' : 'Add New Patent'}
                 </h2>
-                <PatentForm 
-                    onSubmit={editingPatent ? 
-                        (data) => handleUpdatePatent(editingPatent._id, data) : 
+                <PatentForm
+                    onSubmit={editingPatent ?
+                        (data) => handleUpdatePatent(editingPatent._id, data) :
                         handleAddPatent}
                     initialData={editingPatent}
                     user={user}
@@ -257,13 +257,12 @@ const Patent = () => {
                                 </div>
                                 <div className="text-gray-600 dark:text-gray-300 space-y-2">
                                     <p><strong>Patent Number:</strong> {patent.patentNumber || 'N/A'}</p>
-                                    <p><strong>Status:</strong> 
-                                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                                            patent.status === 'Granted' ? 'bg-green-100 text-green-800' :
-                                            patent.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                            patent.status === 'Filed' ? 'bg-blue-100 text-blue-800' :
-                                            'bg-red-100 text-red-800'
-                                        }`}>
+                                    <p><strong>Status:</strong>
+                                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${patent.status === 'Granted' ? 'bg-green-100 text-green-800' :
+                                                patent.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                    patent.status === 'Filed' ? 'bg-blue-100 text-blue-800' :
+                                                        'bg-red-100 text-red-800'
+                                            }`}>
                                             {patent.status}
                                         </span>
                                     </p>

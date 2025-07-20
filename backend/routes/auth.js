@@ -7,7 +7,7 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password, department } = req.body;
+        const { name, email, password, role, collegeId, collegeName, branch, state, city, rollNumber, contactNumber } = req.body;
 
         // Check if user already exists
         const existingUser = await User.findOne({ email });
@@ -20,7 +20,14 @@ router.post('/register', async (req, res) => {
             name,
             email,
             password,
-            department
+            role,
+            collegeId,
+            collegeName,
+            branch,
+            state,
+            city,
+            rollNumber,
+            contactNumber
         });
 
         await user.save();
@@ -40,7 +47,13 @@ router.post('/register', async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                department: user.department
+                collegeId: user.collegeId,
+                collegeName: user.collegeName,
+                branch: user.branch,
+                state: user.state,
+                city: user.city,
+                rollNumber: user.rollNumber,
+                contactNumber: user.contactNumber
             }
         });
     } catch (error) {
@@ -98,7 +111,7 @@ router.get('/me', async (req, res) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
         const user = await User.findById(decoded.userId).select('-password');
-        
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }

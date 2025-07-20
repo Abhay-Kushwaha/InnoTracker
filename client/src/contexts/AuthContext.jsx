@@ -10,8 +10,7 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         checkAuth();
-        // Set up interval to refresh auth status
-        const interval = setInterval(checkAuth, 5 * 60 * 1000); // Check every 5 minutes
+        const interval = setInterval(checkAuth, 5 * 60 * 1000);
         return () => clearInterval(interval);
     }, []);
 
@@ -26,13 +25,13 @@ export const AuthProvider = ({ children }) => {
 
             const response = await axios.get('http://localhost:3000/api/auth/me', {
                 headers: { Authorization: `Bearer ${token}` },
-                withCredentials: true
+                withCredentials: true,
             });
+            // console.log('User data fetched:', response.data);
 
             setUser(response.data);
             setError(null);
         } catch (error) {
-            console.error('Auth check error:', error);
             if (error.response?.status === 401) {
                 localStorage.removeItem('token');
                 setUser(null);
@@ -43,74 +42,39 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const login = async (email, password) => {
-        try {
-            const response = await axios.post('http://localhost:3000/api/auth/login', 
-                { email, password },
-                { withCredentials: true }
-            );
-            
-            const { token, user } = response.data;
-            localStorage.setItem('token', token);
-            setUser(user);
-            setError(null);
-            
-            return { success: true };
-        } catch (error) {
-            const message = error.response?.data?.message || 'Login failed';
-            setError(message);
-            return { 
-                success: false, 
-                message 
-            };
-        }
-    };
-
     const register = async (userData) => {
         try {
-            const response = await axios.post('http://localhost:3000/api/auth/register', 
-                userData,
-                { withCredentials: true }
-            );
-            
+            const response = await axios.post('http://localhost:3000/api/auth/register', userData, { withCredentials: true });
             const { token, user } = response.data;
             localStorage.setItem('token', token);
             setUser(user);
             setError(null);
-            
-            return { success: true };
+            return { success: true, user };
         } catch (error) {
             const message = error.response?.data?.message || 'Registration failed';
             setError(message);
-            return { 
-                success: false, 
-                message 
-            };
+            return { success: false, message };
         }
     };
 
-    const updateProfile = async (userData) => {
+    const login = async (email, password, role) => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.put(
-                'http://localhost:3000/api/auth/profile',
-                userData,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true
-                }
+            const response = await axios.post(
+                'http://localhost:3000/api/auth/login',
+                { email, password, role },
+                { withCredentials: true }
             );
-            
-            setUser(response.data);
+
+            const { token, user } = response.data;
+            localStorage.setItem('token', token);
+            setUser(user);
             setError(null);
-            return { success: true };
+
+            return { success: true, user };
         } catch (error) {
-            const message = error.response?.data?.message || 'Profile update failed';
+            const message = error.response?.data?.message || 'Login failed';
             setError(message);
-            return {
-                success: false,
-                message
-            };
+            return { success: false, message };
         }
     };
 
@@ -125,16 +89,9 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ 
-            user, 
-            loading, 
-            error,
-            login, 
-            register, 
-            logout,
-            updateProfile,
-            clearError
-        }}>
+        <AuthContext.Provider
+            value={{ user, loading, error, login, register, logout, clearError }}
+        >
             {children}
         </AuthContext.Provider>
     );
@@ -146,4 +103,4 @@ export const useAuth = () => {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
-}; 
+};

@@ -1,17 +1,23 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import logo from '../assets/img/logo.png'; // Assuming your logo is here
+import logo from '../assets/img/logo.png';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [role, setRole] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const { login } = useAuth();
+
+    useEffect(() => {
+        AOS.init();
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -19,14 +25,23 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const result = await login(email, password);
+            const result = await login(email, password, role);
             if (result.success) {
-                window.location.href = '/home'; // Force full reload to ensure token is set
+                const userRole = result.user.role;
+                if (userRole === 'college') {
+                    navigate('/college/home');
+                } else if (userRole === 'government') {
+                    navigate('/govt/home');
+                } else {
+                    navigate('/home');
+                }
             } else {
-                setError(result.message);
+                console.error('Login failed:', result.message);
+                setError(result.message || 'Invalid credentials');
             }
-        } catch (err) {
-            setError('Failed to login');
+        } catch {
+            console.error('Login error:', error);
+            setError('Login failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -34,10 +49,7 @@ const Login = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#C9E6F0] p-4 font-poppins">
-            <div
-                className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full"
-                data-aos="zoom-in"
-            >
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full" data-aos="zoom-in">
                 <div className="flex justify-center mb-6">
                     <img src={logo} alt="Innovation Portal Logo" className="w-[120px] h-auto" />
                 </div>
@@ -47,58 +59,79 @@ const Login = () => {
                 </h2>
 
                 {error && (
-                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                        <span className="block sm:inline">{error}</span>
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                        <span>{error}</span>
                     </div>
                 )}
 
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="rounded-md shadow-sm -space-y-px">
-                        <div>
-                            <label htmlFor="email-address" className="sr-only">Email address</label>
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+                        <input
+                            type="email"
+                            id="email"
+                            required
+                            className="block w-full px-4 py-2 border border-gray-300 rounded-md"
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <div className="relative">
                             <input
-                                id="email-address"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                placeholder="Email address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="password" className="sr-only">Password</label>
-                            <input
+                                type={showPassword ? 'text' : 'password'}
                                 id="password"
-                                name="password"
-                                type="password"
-                                autoComplete="current-password"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                placeholder="Password"
+                                className="block w-full px-4 py-2 border border-gray-300 rounded-md"
+                                placeholder="********"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-3 text-sm text-gray-500"
+                            >
+                                {showPassword ? 'Hide' : 'Show'}
+                            </button>
                         </div>
+                    </div>
+
+                    <div>
+                        <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                        <select
+                            id="role"
+                            required
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="block w-full px-4 py-2 border border-gray-300 rounded-md"
+                        >
+                            <option value="" disabled>Select your role</option>
+                            <option value="student">Student</option>
+                            <option value="faculty">Faculty</option>
+                            <option value="college">College</option>
+                            <option value="government">Government</option>
+                        </select>
                     </div>
 
                     <div>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
                         >
-                            {loading ? 'Signing in...' : 'Sign in'}
+                            {loading ? 'Signing in...' : 'Sign In'}
                         </button>
                     </div>
                 </form>
 
                 <div className="text-center mt-6">
-                    <a href="#" className="inline-block align-baseline font-bold text-sm text-[#006073] hover:text-[#004757]">
+                    <Link to="/forgot-password" className="text-sm font-semibold text-[#006073] hover:text-[#004757]">
                         Forgot Password?
-                    </a>
+                    </Link>
                 </div>
             </div>
         </div>

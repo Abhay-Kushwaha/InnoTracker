@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Line, Bar } from "react-chartjs-2";
 import { Chart, registerables } from 'chart.js'; // Import Chart and registerables
 import { FaFileDownload } from "react-icons/fa";
-import AddPublicationForm from "../components/AddPublicationForm";
+import AddPublicationForm from "../../components/AddPublicationForm";
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
-import { publicationAPI, patentAPI } from '../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { publicationAPI, patentAPI } from '../../services/api';
 
 // Register all necessary components from Chart.js
 Chart.register(...registerables);
@@ -37,7 +37,7 @@ const PublicationsPage = () => {
       const res = await publicationAPI.getAll();
       // The backend should already filter by user, but let's double-check
       // Filter publications to only show the current user's entries
-      const userPublications = res.data.filter(pub => 
+      const userPublications = res.data.filter(pub =>
         pub.createdBy === user?._id || pub.createdBy?._id === user?._id
       );
       setPublications(userPublications);
@@ -50,9 +50,9 @@ const PublicationsPage = () => {
 
   const filteredPublications = publications.filter((pub) => {
     const matchesAuthor = filter.author
-      ? pub.authors.some(author => 
-          author.toLowerCase().includes(filter.author.toLowerCase())
-        )
+      ? pub.authors.some(author =>
+        author.toLowerCase().includes(filter.author.toLowerCase())
+      )
       : true;
     const matchesYear = filter.year
       ? new Date(pub.publicationDate).getFullYear() === parseInt(filter.year)
@@ -184,25 +184,25 @@ const PublicationsPage = () => {
 
   const handleAddPublication = async (newPublication) => {
     try {
-      const publicationWithDept = { 
-        ...newPublication, 
+      const publicationWithDept = {
+        ...newPublication,
         department: user?.department || '',
-        authors: Array.isArray(newPublication.authors) 
-          ? newPublication.authors 
+        authors: Array.isArray(newPublication.authors)
+          ? newPublication.authors
           : newPublication.authors.split(',').map(author => author.trim())
       };
-      
+
       // Create the publication
       const res = await publicationAPI.create(publicationWithDept);
       setPublications(prev => [...prev, res.data]);
-      
+
       // If patent checkbox is checked, create a corresponding patent
       if (newPublication.isPatent) {
         try {
           const patentData = {
             title: newPublication.title,
-            inventors: Array.isArray(newPublication.authors) 
-              ? newPublication.authors 
+            inventors: Array.isArray(newPublication.authors)
+              ? newPublication.authors
               : newPublication.authors.split(',').map(author => author.trim()),
             filingDate: newPublication.publicationDate,
             status: 'Filed', // Default status for publications converted to patents
@@ -211,7 +211,7 @@ const PublicationsPage = () => {
             patentNumber: '', // Will be filled when patent is granted
             relatedPublication: res.data._id // Link to the original publication
           };
-          
+
           await patentAPI.create(patentData);
           alert('Publication and corresponding patent added successfully!');
         } catch (patentError) {
@@ -221,7 +221,7 @@ const PublicationsPage = () => {
       } else {
         alert('Publication added successfully!');
       }
-      
+
       setError(null);
     } catch (err) {
       setError('Failed to add publication');
@@ -270,7 +270,7 @@ const PublicationsPage = () => {
       <p>Please log in to view and manage publications.</p>
     </div>
   );
-  
+
   if (error) return (
     <div className="text-center text-red-600 p-8">
       <h2 className="text-2xl font-bold mb-4">Error</h2>
@@ -290,19 +290,19 @@ const PublicationsPage = () => {
       <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6 mb-8" data-aos="fade-up" data-aos-delay="200">
         <h2 className="text-2xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Filter Publications</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input
-          type="text"
+          <input
+            type="text"
             name="author"
             placeholder="Search by author..."
-          value={filter.author}
+            value={filter.author}
             onChange={handleFilterChange}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800"
-        />
-        <input
+          />
+          <input
             type="number"
             name="year"
             placeholder="Filter by year..."
-          value={filter.year}
+            value={filter.year}
             onChange={handleFilterChange}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800"
           />
@@ -314,7 +314,7 @@ const PublicationsPage = () => {
             onChange={handleFilterChange}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-zinc-800"
           />
-            </div>
+        </div>
       </div>
 
       {/* Charts Section */}
@@ -325,7 +325,7 @@ const PublicationsPage = () => {
             <Line data={lineChartData} options={currentChartOptions} />
           </div>
         </div>
-        
+
         <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6" data-aos="fade-left" data-aos-delay="400">
           <h3 className="text-xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Top Researchers</h3>
           <div className="h-64">

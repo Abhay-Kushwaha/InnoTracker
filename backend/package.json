@@ -19,5 +19,8 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6"
+  }
 }

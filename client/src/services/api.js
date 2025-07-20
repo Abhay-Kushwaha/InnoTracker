@@ -20,7 +20,7 @@ api.interceptors.request.use((config) => {
 // Auth API calls
 export const authAPI = {
     login: (credentials) => api.post('/auth/login', credentials),
-    register: (userData) => api.post('/auth/register', userData),
+    register: (userData) => api.post('/auth/register', userData), // userData should include all required fields
     getCurrentUser: () => api.get('/auth/me')
 };
 

@@ -1,12 +1,12 @@
 // src/pages/AwardsRecognitionPage.jsx
 import React, { useState, useEffect } from 'react';
-import AwardCard from '../components/AwardCard';
-import AddEditAwardForm from '../components/AddEditAwardForm';
+import AwardCard from '../../components/AwardCard';
+import AddEditAwardForm from '../../components/AddEditAwardForm';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { FaPlusCircle } from 'react-icons/fa';
-import { useAuth } from '../contexts/AuthContext';
-import { awardAPI } from '../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { awardAPI } from '../../services/api';
 
 const AwardsRecognitionPage = () => {
   const { user } = useAuth();
@@ -30,7 +30,7 @@ const AwardsRecognitionPage = () => {
       const res = await awardAPI.getAll();
       // The backend should already filter by user, but let's double-check
       // Filter awards to only show the current user's entries
-      const userAwards = res.data.filter(award => 
+      const userAwards = res.data.filter(award =>
         award.createdBy === user?._id || award.createdBy?._id === user?._id
       );
       setAwards(userAwards);
@@ -79,7 +79,7 @@ const AwardsRecognitionPage = () => {
       };
 
       const res = await awardAPI.update(editingAward._id, awardData);
-      setAwards(prev => prev.map(award => 
+      setAwards(prev => prev.map(award =>
         award._id === editingAward._id ? res.data : award
       ));
       setEditingAward(null);
@@ -128,7 +128,7 @@ const AwardsRecognitionPage = () => {
       <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
     </div>
   );
-  
+
   if (error) return (
     <div className="text-center text-red-600 p-8">
       <h2 className="text-2xl font-bold mb-4">Error</h2>

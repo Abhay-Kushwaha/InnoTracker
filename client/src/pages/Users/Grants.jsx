@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Line, Bar } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
 import { FaDownload } from 'react-icons/fa';
-import GrantCard from '../components/GrantCard';
-import AddGrantForm from '../components/AddGrantForm';
+import GrantCard from '../../components/GrantCard';
+import AddGrantForm from '../../components/AddGrantForm';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import { useAuth } from '../contexts/AuthContext';
-import { grantAPI } from '../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { grantAPI } from '../../services/api';
 
 Chart.register(...registerables);
 
@@ -32,7 +32,7 @@ const GrantsFundingPage = () => {
       const res = await grantAPI.getAll();
       // The backend should already filter by user, but let's double-check
       // Filter grants to only show the current user's entries
-      const userGrants = res.data.filter(grant => 
+      const userGrants = res.data.filter(grant =>
         grant.createdBy === user?._id || grant.createdBy?._id === user?._id
       );
       setGrants(userGrants);
@@ -190,7 +190,7 @@ const GrantsFundingPage = () => {
       <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
     </div>
   );
-  
+
   if (error) return (
     <div className="text-center text-red-600 p-8">
       <h2 className="text-2xl font-bold mb-4">Error</h2>
@@ -269,7 +269,7 @@ const GrantsFundingPage = () => {
             <Line data={fundingOverTimeData} options={chartOptions} />
           </div>
         </div>
-        
+
         <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6" data-aos="fade-left" data-aos-delay="800">
           <h3 className="text-xl font-bold text-[#014250] dark:text-indigo-400 mb-4">Grants by Status</h3>
           <div className="h-64">

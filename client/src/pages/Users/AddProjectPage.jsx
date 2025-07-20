@@ -1,5 +1,5 @@
 import React from 'react';
-import AddProjectForm from '../components/AddProjectForm';
+import AddProjectForm from '../../components/AddProjectForm';
 import { useNavigate } from 'react-router-dom';
 
 const AddProjectPage = ({ onAddProject }) => {

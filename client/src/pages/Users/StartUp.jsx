@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import AddStartupForm from '../components/AddStartupForm';
+import AddStartupForm from '../../components/AddStartupForm';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import { useAuth } from '../contexts/AuthContext';
-import { startupAPI } from '../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { startupAPI } from '../../services/api';
 
 const StartupIncubationPage = () => {
   const { user } = useAuth();
@@ -22,7 +22,7 @@ const StartupIncubationPage = () => {
       const res = await startupAPI.getAll();
       // The backend should already filter by user, but let's double-check
       // Filter startups to only show the current user's entries
-      const userStartups = res.data.filter(startup => 
+      const userStartups = res.data.filter(startup =>
         startup.createdBy === user?._id || startup.createdBy?._id === user?._id
       );
       setStartups(userStartups);
@@ -35,11 +35,11 @@ const StartupIncubationPage = () => {
 
   const handleAddStartup = async (newStartup) => {
     try {
-      const startupWithDept = { 
-        ...newStartup, 
+      const startupWithDept = {
+        ...newStartup,
         department: user?.department || '',
-        founders: Array.isArray(newStartup.founders) 
-          ? newStartup.founders 
+        founders: Array.isArray(newStartup.founders)
+          ? newStartup.founders
           : newStartup.founders.split(',').map(founder => founder.trim())
       };
       const res = await startupAPI.create(startupWithDept);
@@ -122,8 +122,8 @@ const StartupIncubationPage = () => {
                 <p className="text-gray-600 dark:text-gray-300 text-sm">{startup.description}</p>
               </div>
             ))}
-        </div>
-      )}
+          </div>
+        )}
       </div>
     </div>
   );

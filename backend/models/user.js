@@ -17,25 +17,46 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'Password is required'],
+        required: true,
         minlength: [6, 'Password must be at least 6 characters']
     },
     role: {
         type: String,
-        enum: ['researcher', 'admin', 'faculty'],
-        default: 'researcher'
+        enum: ['student', 'faculty', 'college', 'government'],
+        required: true
     },
-    department: {
+    collegeId: {
         type: String,
-        required: [true, 'Department is required'],
+        required: function () {
+            return this.role !== 'government';
+        },
         trim: true
     },
-    designation: {
+    collegeName: {
         type: String,
         trim: true
     },
-    profileImage: {
-        type: String
+    branch: {
+        type: String,
+        required: function () {
+            return ['student', 'faculty'].includes(this.role);
+        },
+        trim: true
+    },
+    state: {
+        type: String,
+        trim: true
+    },
+    city: {
+        type: String,
+        trim: true
+    },
+    rollNumber: {
+        type: String,
+        required: function () {
+            return ['student'].includes(this.role);
+        },
+        trim: true
     },
     contactNumber: {
         type: String,
@@ -48,22 +69,15 @@ const userSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
     }
 }, {
     timestamps: true
 });
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
+    if (!this.password) return next(); // Skip hashing if password is not set (for govt)
     try {
         this.password = await bcrypt.hash(this.password, 12);
         next();
@@ -72,14 +86,8 @@ userSchema.pre('save', async function(next) {
     }
 });
 
-// Update timestamps
-userSchema.pre('save', function(next) {
-    this.updatedAt = new Date();
-    next();
-});
-
 // Method to check password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
     try {
         return await bcrypt.compare(candidatePassword, this.password);
     } catch (error) {
@@ -87,25 +95,5 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
     }
 };
 
-// Virtual for full name
-userSchema.virtual('fullName').get(function() {
-    return `${this.name}`;
-});
-
-// Method to get public profile
-userSchema.methods.toPublicJSON = function() {
-    return {
-        id: this._id,
-        name: this.name,
-        email: this.email,
-        department: this.department,
-        role: this.role,
-        designation: this.designation,
-        profileImage: this.profileImage,
-        contactNumber: this.contactNumber
-    };
-};
-
-// Check if model exists before creating
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 export default User;

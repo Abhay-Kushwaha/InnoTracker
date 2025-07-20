@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { FaUserCircle, FaEnvelope, FaPhone, FaCalendarAlt, FaMapMarkerAlt, FaInfoCircle, FaSave, FaMoon, FaSun } from 'react-icons/fa';

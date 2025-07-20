@@ -1,5 +1,5 @@
 
-import UserModel from "../models/user.js"
+import UserModel from "../models/User.js";
 const Getuser=async(req,res)=>{
     try {
         const users=await UserModel.find()
@@ -22,6 +22,10 @@ const deletUser=async(req,res)=>{
         if (!user) {
           return  res.status(404).json({message:"user not found"})
         }
+        if (checkAdmin.role === 'college') {
+            return res.status(403).json({ message: "You can't delete yourself" });
+        }
+
         res.status(200).json({message:"user delet successfully ",user})
     } catch (error) {
         res.status(500).json({message:"intenral server error"})

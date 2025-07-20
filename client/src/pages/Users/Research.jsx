@@ -1,12 +1,12 @@
 // src/pages/Research.jsx
 import React, { useState, useEffect } from 'react';
-import ProjectCard from '../components/ProjectCard';
-import FilterBar from '../components/FilterBar'; // Make sure this path is correct
-import AddProjectForm from '../components/AddProjectForm';
+import ProjectCard from '../../components/ProjectCard';
+import FilterBar from '../../components/FilterBar'; // Make sure this path is correct
+import AddProjectForm from '../../components/AddProjectForm';
 import AOS from 'aos';
 import 'aos/dist/aos.css'; // Import AOS CSS
-import { innovationProjectAPI } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { innovationProjectAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ResearchProjects = () => {
   const { user } = useAuth();
@@ -33,7 +33,7 @@ const ResearchProjects = () => {
       const res = await innovationProjectAPI.getAll();
       // The backend should already filter by user, but let's double-check
       // Filter projects to only show the current user's entries
-      const userProjects = res.data.filter(project => 
+      const userProjects = res.data.filter(project =>
         project.createdBy === user?._id || project.createdBy?._id === user?._id
       );
       setProjects(userProjects);
